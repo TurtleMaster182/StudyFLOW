@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "Study flow",
+    "slug": "studyflow",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "platforms": ["ios", "android"],
+    "userInterfaceStyle": "light",
+    "scheme": "studyflow",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.studyflow.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Photograph lesson pages to turn them into quizzes.",
+        "NSPhotoLibraryUsageDescription": "Choose lesson photos to make quizzes and recap questions."
+      }
+    },
+    "android": {
+      "package": "app.studyflow.mobile",
+      "permissions": ["CAMERA"]
+    },
+    "plugins": [
+      "expo-document-picker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose lesson photos to make quizzes and recap questions.",
+          "cameraPermission": "Photograph lesson pages to turn them into quizzes.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-secure-store"
+    ]
+  }
+}
