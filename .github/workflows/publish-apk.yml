@@ -1,0 +1,52 @@
+name: Publish Android test APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful Build Android APK run containing the verified artifact
+        required: true
+        default: '38694375039'
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: publish-android-test-apk
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Study-flow-android
+          path: download
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify downloaded APK
+        working-directory: download
+        run: sha256sum -c SHA256SUMS.txt
+      - name: Publish APK and checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+        run: |
+          BUILD_COMMIT="$(gh api "repos/$REPOSITORY/actions/runs/$BUILD_RUN_ID" --jq '.head_sha')"
+          cat > release-notes.md <<'NOTES'
+          Standalone Android test build of Study flow.
+
+          Download **Study-flow-1.0.0.apk** below and install it on Android. Enter your OpenAI API key in the app's Settings. The app runs without Expo Go or a development server.
+
+          Includes photo/PDF lessons, AI quizzes, saved recap questions, and weekly class periods. Supports ARM64, ARMv7, x86, and x86_64. The APK signature and bundled JavaScript were verified in the build workflow; SHA256SUMS.txt is included for download verification.
+
+          This APK uses the standard Android test signing key and is intended for testing by sideloading.
+          NOTES
+          gh release create v1.0.0-test.1 download/Study-flow-1.0.0.apk download/SHA256SUMS.txt \
+            --repo "$REPOSITORY" --target "$BUILD_COMMIT" --prerelease \
+            --title "Study flow 1.0.0 Android test APK" --notes-file release-notes.md
