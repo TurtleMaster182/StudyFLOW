@@ -59,6 +59,8 @@ The implementation was checked with TypeScript, automated tests with mocked API 
 
 ## Installable builds
 
+For a standalone test APK without an Expo account, open **Actions → Build Android APK → Run workflow** in this GitHub repository. Download the **Study-flow-android** artifact from the completed run and unzip it to get `Study-flow-1.0.0.apk` and its SHA-256 checksum. The APK bundles its JavaScript, works without Metro or Expo Go, and supports ARM and x86 Android devices. It uses the generated Android project's test signing key and is intended for sideloading, not a Play Store release. You still enter your own OpenAI API key in the app's Settings.
+
 An `eas.json` preview profile is included. With an Expo account and EAS CLI set up for this repository:
 
 ```sh

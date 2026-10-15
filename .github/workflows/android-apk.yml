@@ -1,0 +1,62 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Standalone test APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - run: npm run check
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --no-install
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build standalone release variant
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon --max-workers=2 --console=plain -x lint -x test "-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g"
+        env:
+          NODE_ENV: production
+      - name: Verify and package APK
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          cp android/app/build/outputs/apk/release/app-release.apk artifacts/Study-flow-1.0.0.apk
+          build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          "$build_tools/apksigner" verify --verbose artifacts/Study-flow-1.0.0.apk
+          python3 - <<'PY'
+          from zipfile import ZipFile
+          with ZipFile('artifacts/Study-flow-1.0.0.apk') as apk:
+              names = set(apk.namelist())
+              for required in ['AndroidManifest.xml', 'classes.dex', 'assets/index.android.bundle']:
+                  assert required in names, f'Missing {required}'
+              for abi in ['arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64']:
+                  assert any(name.startswith(f'lib/{abi}/') for name in names), f'Missing {abi}'
+              print('Verified bundled JavaScript and all four Android architectures.')
+          PY
+          cd artifacts
+          sha256sum Study-flow-1.0.0.apk > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Study-flow-android
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 30
